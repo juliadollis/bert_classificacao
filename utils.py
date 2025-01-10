@@ -43,36 +43,24 @@ class CfgNode:
         return {k: v.to_dict() if isinstance(v, CfgNode) else v for k, v in self.__dict__.items()}
 
     def merge_from_dict(self, d):
-        for key, value in d.items():
-            if isinstance(value, dict):
-                node = getattr(self, key, None)
-                if node is None or not isinstance(node, CfgNode):
-                    node = CfgNode()
-                    setattr(self, key, node)
-                node.merge_from_dict(value)
-            else:
-                setattr(self, key, value)
+        self.__dict__.update(d)
 
     def merge_from_args(self, args):
         for arg in args:
             keyval = arg.split('=')
-            assert len(keyval) == 2, "esperando cada argumento de substituição no formato --arg=value, recebeu %s" % arg
+            assert len(keyval) == 2, "Esperado formato --arg=valor, mas recebeu %s" % arg
             key, val = keyval
             try:
                 val = literal_eval(val)
-            except:
+            except ValueError:
                 pass
-            assert key[:2] == '--', f"o argumento {arg} não começa com '--'"
+            assert key[:2] == '--'
             key = key[2:]
             keys = key.split('.')
             obj = self
             for k in keys[:-1]:
-                if not hasattr(obj, k):
-                    setattr(obj, k, CfgNode())
                 obj = getattr(obj, k)
             leaf_key = keys[-1]
-            if hasattr(obj, leaf_key):
-                print(f"sobrescrevendo atributo de configuração {key} com {val}")
-                setattr(obj, leaf_key, val)
-            else:
-                raise AttributeError(f"{key} não é um atributo existente na configuração")
+            assert hasattr(obj, leaf_key), f"{key} não é um atributo válido no config"
+            print("Sobrescrevendo config: %s com %s" % (key, val))
+            setattr(obj, leaf_key, val)
