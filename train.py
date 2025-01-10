@@ -58,7 +58,7 @@ def load_imdb_dataset(tokenizer, max_length, split_ratio=0.8):
 def main():
     parser = argparse.ArgumentParser(description="Treinamento de BERT para Classificação no IMDB")
     parser.add_argument('--config', type=str, default=None, help="Caminho para arquivo de configuração JSON")
-    parser.add_argument('--override', nargs='*', default=[], help="Argumentos para sobrescrever a configuração no formato --arg=value")
+    parser.add_argument('--override', nargs='*', default=[], help="Argumentos para sobrescrever a configuração no formato key=value")
     parser.add_argument('--seed', type=int, default=42, help="Semente para reprodutibilidade")
     args = parser.parse_args()
 
