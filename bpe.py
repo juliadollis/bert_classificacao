@@ -79,7 +79,7 @@ class Encoder:
             token_bytes = token.encode('utf-8')
             token_translated = ''.join(self.byte_encoder[b] for b in token_bytes)
             token_merged = self.bpe(token_translated).split(' ')
-            token_ix = [self.encoder.get(bpe_token, self.encoder.get('<|unk|>')) for bpe_token in token_merged]
+            token_ix = [self.encoder[bpe_token] for bpe_token in token_merged]
             bpe_idx.extend(token_ix)
         return bpe_idx
 
@@ -91,7 +91,7 @@ class Encoder:
             token_bytes = token.encode('utf-8')
             token_translated = ''.join(self.byte_encoder[b] for b in token_bytes)
             token_merged = self.bpe(token_translated).split(' ')
-            token_ix = [self.encoder.get(bpe_token, self.encoder.get('<|unk|>')) for bpe_token in token_merged]
+            token_ix = [self.encoder[bpe_token] for bpe_token in token_merged]
             bpe_idx.extend(token_ix)
             parts.append({
                 'token': token,
@@ -108,21 +108,21 @@ class Encoder:
         return out
 
     def decode(self, bpe_idx):
-        tokens_merged = [self.decoder.get(token, '<|unk|>') for token in bpe_idx]
+        tokens_merged = [self.decoder[token] for token in bpe_idx]
         tokens_flat = ''.join(tokens_merged)
-        tokens_bytes = bytearray([self.byte_decoder.get(c, 0) for c in tokens_flat])
+        tokens_bytes = bytearray([self.byte_decoder[c] for c in tokens_flat])
         text = tokens_bytes.decode('utf-8', errors='replace')
         return text
 
 def get_file(local_file, remote_file):
     if not os.path.isfile(local_file):
-        print(f"Baixando {remote_file} para {local_file}")
+        print(f"downloading {remote_file} to {local_file}")
         response = requests.get(remote_file)
         open(local_file, "wb").write(response.content)
 
 def get_encoder():
     home_dir = os.path.expanduser('~')
-    cache_dir = os.path.join(home_dir, '.cache', 'bert-classification')
+    cache_dir = os.path.join(home_dir, '.cache', 'mingpt')
     os.makedirs(cache_dir, exist_ok=True)
 
     encoder_local_file = os.path.join(cache_dir, 'encoder.json')
@@ -147,17 +147,11 @@ class BPETokenizer:
     def __init__(self):
         self.encoder = get_encoder()
 
-    def __call__(self, text, return_tensors='pt', max_length=None):
+    def __call__(self, text, return_tensors='pt'):
         assert return_tensors == 'pt'
         assert isinstance(text, str)
-        idx = self.encoder.encode(text)
-        if max_length is not None:
-            pad_id = self.encoder.encoder.get('<|pad|>', self.encoder.encoder.get('<|unk|>'))
-            if len(idx) > max_length:
-                idx = idx[:max_length]
-            else:
-                idx = idx + [pad_id] * (max_length - len(idx))
-        idx = [idx]
+        idx = [self.encoder.encode(text)]
+        import torch
         out = torch.tensor(idx, dtype=torch.long)
         return out
 
@@ -171,13 +165,13 @@ if __name__ == '__main__':
     e = get_encoder()
     r = e.encode_and_show_work(text)
 
-    print("Texto original:")
+    print("Original text is:")
     print(text)
-    print("\nTexto pré-tokenizado:")
+    print("First the text gets pre-tokenized:")
     print(r['tokens'])
-    print("\nDetalhes das etapas:")
+    print("Detailed steps:")
     for part in r['parts']:
         print(part)
-    print("\nÍndices finais (bpe_idx):")
+    print("Final outcome (bpe_idx):")
     print(r['bpe_idx'])
-    print("\nPronto para ser alimentado em um Transformer!")
+    print("Ready to feed into a Transformer!")
